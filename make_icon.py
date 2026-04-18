@@ -1,18 +1,13 @@
 """Generate mobile app icons for PyPath. Run once: `python make_icon.py`."""
-import math
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from pathlib import Path
 
 OUT = Path(__file__).parent / "icons"
 OUT.mkdir(exist_ok=True)
 
 # Brand palette — green PyPath
-BG_TOP    = (124, 224, 160)  # mint green
-BG_BOT    = (34, 139, 77)    # deep forest green
-BODY      = (245, 200, 66)   # yellow snake body
-BODY_DARK = (210, 160, 40)   # shaded side of body
-EYE       = (30, 30, 40)     # near-black eye
-TONGUE    = (232, 80, 80)    # red tongue
+BG_TOP = (124, 224, 160)  # mint green
+BG_BOT = (34, 139, 77)    # deep forest green
 
 
 def _blob(size, fill, cx, cy, rx, ry):
@@ -24,12 +19,74 @@ def _blob(size, fill, cx, cy, rx, ry):
     return layer
 
 
-def _bezier_point(p0, p1, p2, p3, t):
-    """Cubic bezier: point at parameter t (0..1)."""
-    u = 1 - t
-    x = u*u*u*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t*t*t*p3[0]
-    y = u*u*u*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t*t*t*p3[1]
-    return (x, y)
+def _load_emoji_font(px):
+    """Pick a system color-emoji font, largest first."""
+    candidates = [
+        "C:/Windows/Fonts/seguiemj.ttf",     # Windows color emoji
+        "/System/Library/Fonts/Apple Color Emoji.ttc",  # macOS
+        "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",  # Linux (Noto)
+    ]
+    for p in candidates:
+        try:
+            return ImageFont.truetype(p, px)
+        except (OSError, IOError):
+            continue
+    return None
+
+
+def draw_snake_emoji(img: Image.Image, size: int) -> None:
+    """Render the 🐍 emoji (same glyph used in the app's path-hero) centered on img."""
+    # Segoe UI Emoji bitmap strikes come in discrete sizes; 109 is the largest
+    # built-in strike. Load at that size then downscale to the target icon size.
+    STRIKE = 109
+    emoji_font = _load_emoji_font(STRIKE)
+    if emoji_font is None:
+        raise RuntimeError("No color emoji font found; cannot render 🐍.")
+
+    # Render at the strike size to a transparent square, then resize.
+    strike_size = STRIKE * 5  # generous pad so antialiased edges aren't clipped
+    glyph = Image.new("RGBA", (strike_size, strike_size), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glyph)
+    try:
+        bbox = gd.textbbox((0, 0), "🐍", font=emoji_font, embedded_color=True)
+    except TypeError:
+        bbox = gd.textbbox((0, 0), "🐍", font=emoji_font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    tx = (strike_size - tw) / 2 - bbox[0]
+    ty = (strike_size - th) / 2 - bbox[1]
+    try:
+        gd.text((tx, ty), "🐍", font=emoji_font, embedded_color=True)
+    except TypeError:
+        gd.text((tx, ty), "🐍", font=emoji_font)
+
+    # Trim to glyph bounds for a tighter resize
+    alpha = glyph.split()[-1]
+    ab = alpha.getbbox()
+    if ab:
+        glyph = glyph.crop(ab)
+
+    # Scale snake to ~74% of icon width, preserving aspect
+    target_w = int(size * 0.74)
+    ratio = target_w / glyph.width
+    target_h = int(glyph.height * ratio)
+    glyph = glyph.resize((target_w, target_h), Image.LANCZOS)
+
+    # Soft drop shadow behind the snake for depth on the green bg
+    shadow = Image.new("RGBA", glyph.size, (0, 0, 0, 0))
+    shadow_from_alpha = glyph.split()[-1].point(lambda a: int(a * 0.55))
+    shadow.putalpha(shadow_from_alpha)
+    # Recolor shadow to solid dark
+    dark = Image.new("RGBA", glyph.size, (0, 0, 0, 255))
+    dark.putalpha(shadow_from_alpha)
+    blurred = dark.filter(ImageFilter.GaussianBlur(radius=size * 0.02))
+
+    # Place on the icon, centered with a slight vertical lift (optical centering)
+    ox = (size - glyph.width) // 2
+    oy = (size - glyph.height) // 2 - int(size * 0.015)
+
+    img.alpha_composite(blurred, (ox + int(size * 0.01), oy + int(size * 0.02)))
+    img.alpha_composite(glyph,   (ox, oy))
 
 
 def draw_snake(img: Image.Image, size: int) -> None:
@@ -156,8 +213,8 @@ def make_icon(size: int) -> Image.Image:
     glow = glow.filter(ImageFilter.GaussianBlur(radius=size * 0.09))
     img = Image.alpha_composite(img, glow)
 
-    # Draw the snake (renders to the rounded-rect image in place)
-    draw_snake(img, size)
+    # Draw the snake (uses the same 🐍 emoji as the app's hero banner)
+    draw_snake_emoji(img, size)
 
     return img
 
