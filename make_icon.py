@@ -5,10 +5,10 @@ from pathlib import Path
 OUT = Path(__file__).parent / "icons"
 OUT.mkdir(exist_ok=True)
 
-# Brand palette
-BG_TOP    = (74, 158, 255)   # --blue
-BG_BOT    = (176, 107, 255)  # --purple
-ACCENT    = (245, 200, 66)   # --yellow
+# Brand palette — green PyPath
+BG_TOP    = (124, 224, 160)  # mint green
+BG_BOT    = (34, 139, 77)    # deep forest green
+ACCENT    = (245, 200, 66)   # yellow accent
 GLYPH_FG  = (255, 255, 255)
 
 
