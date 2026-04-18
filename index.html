@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PyPath — Learn Python</title>
+
+<!-- App icons (PNG, mobile-friendly) -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+<!-- PWA manifest + theming for mobile browsers -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1f2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PyPath">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20260418o">
+</head>
+<body>
+
+<header>
+  <button class="lang-pill" id="lang-pill"><span class="lp-menu">☰</span><span class="lp-name" id="lang-pill-name">🐍 Python</span></button>
+  <div class="progress-bar-wrap">
+    <div class="progress-label"><span id="progress-text">0% · 0 of 0 lessons</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <div class="header-stats">
+    <div class="hs-item"><span class="hs-icon">🔥</span><span id="streak-val">0</span></div>
+    <div class="hs-item"><span class="hs-icon">⭐</span><span id="xp-val">0</span></div>
+  </div>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="path">📚 Path</button>
+  <button class="tab-btn" data-tab="practice">🎯 Practice</button>
+  <button class="tab-btn" data-tab="playground">⚡ Playground</button>
+  <button class="tab-btn" data-tab="projects">🛠 Projects</button>
+  <button class="tab-btn" data-tab="overview">📖 Overview</button>
+  <button class="tab-btn" data-tab="progress">🏆 Progress</button>
+  <button class="tab-btn" data-tab="tutor">🤖 AI Tutor</button>
+  <button class="tab-btn" data-tab="games">🎮 Games</button>
+  <button class="tab-btn" data-tab="stats">📊 Stats</button>
+</nav>
+
+<div class="app-body">
+  <div class="tab-panel active" id="tab-path">
+    <div class="duo-path" id="duo-path"></div>
+  </div>
+  <div class="tab-panel" id="tab-practice"></div>
+  <div class="tab-panel" id="tab-playground"></div>
+  <div class="tab-panel" id="tab-projects"></div>
+  <div class="tab-panel" id="tab-overview"></div>
+  <div class="tab-panel" id="tab-progress"></div>
+  <div class="tab-panel" id="tab-tutor"></div>
+  <div class="tab-panel" id="tab-games"></div>
+  <div class="tab-panel" id="tab-stats"></div>
+</div>
+
+<div id="lesson-reader"></div>
+
+<script src="lessons.js?v=20260418o"></script>
+<script src="courses.js?v=20260418o"></script>
+<script src="app.js?v=20260418o"></script>
+</body>
+</html>

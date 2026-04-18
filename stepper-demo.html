@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Stepper — Demo</title>
+<style>
+  :root {
+    --bg: #1a1f2e;
+    --card: #242a3b;
+    --card-2: #2d3447;
+    --card-3: #353c52;
+    --text: #e5e8f0;
+    --text-dim: #9aa3b8;
+    --mint: #7ce0a0;
+    --yellow: #f5c842;
+    --blue: #4a9eff;
+    --purple: #b06bff;
+    --red: #e89999;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 20px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+  }
+  h1 { text-align: center; margin-bottom: 8px; }
+  .subtitle { text-align: center; color: var(--text-dim); margin-bottom: 40px; }
+  .container { max-width: 900px; margin: 0 auto; }
+
+  .demo {
+    background: var(--card);
+    border: 1px solid var(--card-3);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 32px;
+  }
+  .demo h2 { margin: 0 0 6px; font-size: 20px; }
+  .demo .explainer { color: var(--text-dim); font-size: 14px; margin-bottom: 18px; }
+
+  /* ========== Stack-frame stepper ========== */
+  .stepper { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .pane { background: var(--card-2); border-radius: 10px; padding: 14px; min-height: 220px; }
+  .pane-title { font-size: 11px; color: var(--text-dim); font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+  .code-pane pre {
+    margin: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    counter-reset: line;
+  }
+  .line {
+    display: block;
+    padding: 1px 10px 1px 40px;
+    position: relative;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  .line::before {
+    counter-increment: line;
+    content: counter(line);
+    position: absolute;
+    left: 6px;
+    color: var(--text-dim);
+    font-size: 12px;
+    opacity: 0.5;
+  }
+  .line.active { background: rgba(245, 200, 66, 0.18); }
+  .line.active::after {
+    content: '▶';
+    position: absolute;
+    left: 24px;
+    color: var(--yellow);
+    font-size: 11px;
+  }
+  .kw { color: #c084fc; }
+  .fn { color: #60a5fa; }
+  .num { color: #fbbf24; }
+  .str { color: #7ce0a0; }
+  .com { color: #6b7280; font-style: italic; }
+
+  /* stack frames */
+  .stack-frame {
+    background: var(--card-3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    transition: all 0.25s ease;
+    animation: frame-in 0.3s ease;
+  }
+  .stack-frame.active {
+    border-color: var(--yellow);
+    box-shadow: 0 0 0 2px rgba(245, 200, 66, 0.25);
+  }
+  .stack-frame.returning {
+    border-color: var(--mint);
+    background: rgba(124, 224, 160, 0.1);
+  }
+  @keyframes frame-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .frame-name { font-size: 12px; font-weight: 700; color: var(--yellow); margin-bottom: 6px; }
+  .frame-vars { display: grid; gap: 4px; }
+  .frame-var {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  .var-name { color: var(--text-dim); }
+  .var-val { color: var(--mint); font-weight: 600; }
+
+  /* controls */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--card-2);
+    border-radius: 10px;
+  }
+  .controls button {
+    background: var(--card-3);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .controls button:hover:not(:disabled) { background: var(--blue); border-color: var(--blue); }
+  .controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .controls button.primary { background: var(--blue); border-color: var(--blue); }
+  .step-count { margin-left: auto; color: var(--text-dim); font-size: 13px; }
+  .description {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: rgba(74, 158, 255, 0.1);
+    border-left: 3px solid var(--blue);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text);
+    min-height: 40px;
+  }
+
+  /* ========== list animation ========== */
+  .list-viz {
+    background: var(--card-2);
+    border-radius: 10px;
+    padding: 28px 18px;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+  .list-row {
+    display: flex;
+    gap: 4px;
+    align-items: flex-start;
+  }
+  .cell {
+    width: 64px;
+    min-height: 64px;
+    background: var(--card-3);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text);
+    transition: all 0.4s cubic-bezier(0.34, 1.3, 0.6, 1);
+    position: relative;
+  }
+  .cell .idx {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+  .cell.highlight {
+    border-color: var(--yellow);
+    background: rgba(245, 200, 66, 0.15);
+    box-shadow: 0 0 0 3px rgba(245, 200, 66, 0.2);
+  }
+  .cell.inserted {
+    animation: cell-in 0.5s ease;
+    border-color: var(--mint);
+    background: rgba(124, 224, 160, 0.15);
+  }
+  .cell.removed {
+    animation: cell-out 0.4s ease forwards;
+    border-color: var(--red);
+    background: rgba(232, 153, 153, 0.15);
+  }
+  .cell.changed {
+    animation: cell-flash 0.7s ease;
+  }
+  @keyframes cell-in {
+    from { transform: scale(0) translateY(-16px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  @keyframes cell-out {
+    to { transform: scale(0.3); opacity: 0; width: 0; margin: 0; padding: 0; border-width: 0; }
+  }
+  @keyframes cell-flash {
+    0%, 100% { background: var(--card-3); }
+    50%      { background: rgba(245, 200, 66, 0.4); border-color: var(--yellow); }
+  }
+  .list-label {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  /* heap panel */
+  .heap-pane { }
+  .heap-obj {
+    background: var(--card-3);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    animation: frame-in 0.3s ease;
+  }
+  .heap-type { color: var(--purple); font-size: 11px; font-weight: 700; }
+  .heap-val { color: var(--mint); }
+
+  .arrow {
+    color: var(--purple);
+    margin: 0 6px;
+  }
+
+  .small-note {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔬 Python Tutor-style Demo</h1>
+  <div class="subtitle">Two miniature concepts you could drop into PyPath. Use the buttons to step through.</div>
+
+  <!-- ============ DEMO 1: CALL STACK ============ -->
+  <div class="demo">
+    <h2>① Call Stack Stepper</h2>
+    <div class="explainer">Watch <code>factorial(3)</code> recurse. Frames push on the right, their locals update, and values return as frames pop.</div>
+
+    <div class="stepper">
+      <div class="pane code-pane">
+        <div class="pane-title">CODE</div>
+        <pre id="code-pane"></pre>
+      </div>
+      <div class="pane heap-pane">
+        <div class="pane-title">CALL STACK</div>
+        <div id="stack-pane"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="s1-restart">⟲ Restart</button>
+      <button id="s1-prev">◀ Prev</button>
+      <button id="s1-next" class="primary">Next ▶</button>
+      <div class="step-count" id="s1-count">Step 0 / 0</div>
+    </div>
+    <div class="description" id="s1-desc"></div>
+  </div>
+
+  <!-- ============ DEMO 2: LIST MUTATION ============ -->
+  <div class="demo">
+    <h2>② List Mutation Animation</h2>
+    <div class="explainer">Each operation animates: inserts pop in, removals slide out, reassignments flash yellow.</div>
+
+    <div class="list-viz">
+      <div class="list-label" id="l2-op">nums = [10, 20, 30]</div>
+      <div class="list-row" id="l2-row"></div>
+    </div>
+    <div class="controls" style="margin-top: 14px;">
+      <button id="l2-restart">⟲ Restart</button>
+      <button id="l2-prev">◀ Prev</button>
+      <button id="l2-next" class="primary">Next ▶</button>
+      <div class="step-count" id="l2-count">Step 0 / 0</div>
+    </div>
+    <div class="description" id="l2-desc">Starting state.</div>
+  </div>
+
+  <div class="small-note">
+    This is a static ~300-line prototype. Real <a href="https://pythontutor.com" style="color: var(--blue);">pythontutor.com</a> does the same thing by actually tracing CPython bytecode. For PyPath, precomputing traces per lesson (or shelling out to Pyodide) is the path.
+  </div>
+</div>
+
+<script>
+// ======================= DEMO 1: CALL STACK =======================
+// Each step is a full snapshot: the current line, every frame and its vars, and a description.
+const CODE_LINES = [
+  ['<span class="kw">def</span> <span class="fn">factorial</span>(n):',          1],
+  ['    <span class="kw">if</span> n <= <span class="num">1</span>:',              2],
+  ['        <span class="kw">return</span> <span class="num">1</span>',            3],
+  ['    <span class="kw">return</span> n * <span class="fn">factorial</span>(n - <span class="num">1</span>)', 4],
+  ['',                                                                              5],
+  ['result = <span class="fn">factorial</span>(<span class="num">3</span>)',        6],
+  ['<span class="fn">print</span>(result)',                                         7],
+];
+
+const STEPS = [
+  { line: 6, frames: [{name: '<global>', vars: {}}], desc: 'About to call factorial(3).' },
+  { line: 1, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}, active: true}], desc: 'Entered factorial(3). n=3 is bound in the new frame.' },
+  { line: 2, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}, active: true}], desc: 'Checking if n <= 1 — false, so we skip the base case.' },
+  { line: 4, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}, active: true}], desc: 'Evaluating n * factorial(n-1) → need factorial(2) first.' },
+  { line: 1, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}}, {name: 'factorial', vars: {n: 2}, active: true}], desc: 'Entered factorial(2). Previous frame is paused.' },
+  { line: 2, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}}, {name: 'factorial', vars: {n: 2}, active: true}], desc: 'n <= 1? No, keep recursing.' },
+  { line: 4, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}}, {name: 'factorial', vars: {n: 2}, active: true}], desc: 'Calling factorial(1) from factorial(2).' },
+  { line: 1, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}}, {name: 'factorial', vars: {n: 2}}, {name: 'factorial', vars: {n: 1}, active: true}], desc: 'Entered factorial(1). Stack is 3-deep.' },
+  { line: 2, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}}, {name: 'factorial', vars: {n: 2}}, {name: 'factorial', vars: {n: 1}, active: true}], desc: 'n <= 1? Yes! Base case hit.' },
+  { line: 3, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}}, {name: 'factorial', vars: {n: 2}}, {name: 'factorial', vars: {n: 1, 'return': 1}, returning: true}], desc: 'factorial(1) returns 1. Its frame pops next.' },
+  { line: 4, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3}}, {name: 'factorial', vars: {n: 2, 'return': 2}, returning: true}], desc: 'factorial(2) resumes: 2 * 1 = 2. Returns 2.' },
+  { line: 4, frames: [{name: '<global>', vars: {}}, {name: 'factorial', vars: {n: 3, 'return': 6}, returning: true}], desc: 'factorial(3) resumes: 3 * 2 = 6. Returns 6.' },
+  { line: 7, frames: [{name: '<global>', vars: {result: 6}}], desc: 'Back in global scope. result = 6.' },
+];
+
+let s1 = 0;
+function renderS1() {
+  const step = STEPS[s1];
+  // code
+  document.getElementById('code-pane').innerHTML = CODE_LINES.map(([html, lineNum]) => {
+    const cls = lineNum === step.line ? 'line active' : 'line';
+    return `<span class="${cls}">${html || '&nbsp;'}</span>`;
+  }).join('');
+  // stack
+  document.getElementById('stack-pane').innerHTML = step.frames.map(f => {
+    const cls = f.active ? 'stack-frame active' : (f.returning ? 'stack-frame returning' : 'stack-frame');
+    const vars = Object.entries(f.vars).map(([k, v]) =>
+      `<div class="frame-var"><span class="var-name">${k}</span><span class="var-val">${JSON.stringify(v)}</span></div>`
+    ).join('');
+    return `<div class="${cls}"><div class="frame-name">${f.name}</div><div class="frame-vars">${vars || '<div class="var-name" style="font-size:12px;">(no locals)</div>'}</div></div>`;
+  }).reverse().join(''); // newest at top
+  // desc
+  document.getElementById('s1-desc').textContent = step.desc;
+  document.getElementById('s1-count').textContent = `Step ${s1 + 1} / ${STEPS.length}`;
+  document.getElementById('s1-prev').disabled = s1 === 0;
+  document.getElementById('s1-next').disabled = s1 === STEPS.length - 1;
+}
+document.getElementById('s1-next').addEventListener('click', () => { if (s1 < STEPS.length - 1) { s1++; renderS1(); } });
+document.getElementById('s1-prev').addEventListener('click', () => { if (s1 > 0) { s1--; renderS1(); } });
+document.getElementById('s1-restart').addEventListener('click', () => { s1 = 0; renderS1(); });
+renderS1();
+
+// ======================= DEMO 2: LIST MUTATION =======================
+// Each step carries the resulting list + which cell to highlight + the operation text.
+const L_STEPS = [
+  { list: [10, 20, 30],                 highlight: null,      op: 'nums = [10, 20, 30]',     desc: 'Initial list with three items.' },
+  { list: [10, 20, 30, 40],             inserted: 3,          op: 'nums.append(40)',          desc: 'append(40) pushes a new cell at the end.' },
+  { list: [10, 99, 20, 30, 40],         inserted: 1,          op: 'nums.insert(1, 99)',       desc: 'insert(1, 99) pushes every later cell one slot right.' },
+  { list: [99, 20, 30, 40],             removed: 0,           op: 'nums.pop(0)',              desc: 'pop(0) removes the head. Every index shifts down by 1.' },
+  { list: [99, 20, 7, 40],              changed: 2,           op: 'nums[2] = 7',              desc: 'Assignment replaces the value at index 2 — no shifting.' },
+];
+
+let l2 = 0;
+let _prevList = null;
+function renderL2() {
+  const step = L_STEPS[l2];
+  document.getElementById('l2-op').textContent = step.op;
+  document.getElementById('l2-desc').textContent = step.desc;
+  document.getElementById('l2-count').textContent = `Step ${l2 + 1} / ${L_STEPS.length}`;
+  document.getElementById('l2-prev').disabled = l2 === 0;
+  document.getElementById('l2-next').disabled = l2 === L_STEPS.length - 1;
+
+  const row = document.getElementById('l2-row');
+  row.innerHTML = step.list.map((v, i) => {
+    let cls = 'cell';
+    if (step.inserted === i) cls += ' inserted';
+    else if (step.changed === i) cls += ' changed';
+    else if (step.highlight === i) cls += ' highlight';
+    return `<div class="${cls}"><span class="idx">[${i}]</span>${v}</div>`;
+  }).join('');
+
+  // Show a ghost "removed" cell briefly when backing up the removed one
+  if (step.removed !== undefined && _prevList) {
+    // Just flash the surviving cells — good enough for a demo
+  }
+  _prevList = step.list.slice();
+}
+document.getElementById('l2-next').addEventListener('click', () => { if (l2 < L_STEPS.length - 1) { l2++; renderL2(); } });
+document.getElementById('l2-prev').addEventListener('click', () => { if (l2 > 0) { l2--; renderL2(); } });
+document.getElementById('l2-restart').addEventListener('click', () => { l2 = 0; renderL2(); });
+renderL2();
+</script>
+
+</body>
+</html>
